@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Ray Bundle viewer in three.js</title>
+  <meta charset="utf-8">
+</head>
+<body style="margin: 0;">
+
+  <script src="https://threejs.org/build/three.js"></script>
+  <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    // Set up the scene, camera, and renderer as global variables.
+    var WIDTH = window.innerWidth,
+          HEIGHT = window.innerHeight; 
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(WIDTH, HEIGHT);
+    renderer.setClearColor(new THREE.Color(0x333F47), 1);
+    document.body.appendChild(renderer.domElement);
+    window.addEventListener('resize', function() {
+      let WIDTH = window.innerWidth,
+        HEIGHT = window.innerHeight;
+      renderer.setSize(WIDTH, HEIGHT);
+      camera.aspect = WIDTH / HEIGHT;
+      camera.updateProjectionMatrix();
+    });
+
+    // Renders the scene and updates the render as needed.
+    function render() {
+      renderer.render(scene, camera);
+    }
+    let filename = "raybundlediff.json"/*function(name){
+      var rx = new RegExp('[\&|\?]'+name+'=([^\&\#]+)'),
+        val = window.location.search.match(rx);
+      return !val ? 'rayBundle.json':val[1];
+    }("f");*/
+    console.log(filename)
+    let loader = new THREE.FileLoader().load(filename,function(jsonData){
+      let bundleData = JSON.parse(jsonData);
+      console.log()
+      // Compute Bounding box
+      let bounds = new THREE.Box3();
+      bundleData.rayBundles.forEach(
+        function(rayBundle,i){
+          console.log(i+"-th ray Bundle size "+rayBundle.length);
+          for (let i=0; i<rayBundle.length; i+=3){
+            if (rayBundle[i+0]<bounds.min.x)bounds.min.x=rayBundle[i+0];
+            if (rayBundle[i+1]<bounds.min.y)bounds.min.y=rayBundle[i+1];
+            if (rayBundle[i+2]<bounds.min.z)bounds.min.z=rayBundle[i+2];
+            if (rayBundle[i+0]>bounds.max.x)bounds.max.x=rayBundle[i+0];
+            if (rayBundle[i+1]>bounds.max.y)bounds.max.y=rayBundle[i+1];
+            if (rayBundle[i+2]>bounds.max.z)bounds.max.z=rayBundle[i+2];
+          }
+        }
+      )
+      let boxCenter = new THREE.Vector3();
+      bounds.getCenter(boxCenter);
+      camera.lookAt(boxCenter);
+
+      let boxSize = new THREE.Vector3();
+      bounds.getSize(boxSize);
+      console.log("boxSize: "+JSON.stringify(boxSize));
+
+      let cameraPos = boxCenter.clone();
+      let maxSize = 2*Math.max(boxSize.x,Math.max(boxSize.y, boxSize.z));
+
+      if (boxSize.x<boxSize.y && boxSize.x<boxSize.z) cameraPos.x -= maxSize;
+      else if (boxSize.y<boxSize.x && boxSize.y<boxSize.z) cameraPos.y -= maxSize;
+      else cameraPos.z -= maxSize;
+
+      camera.position.set(cameraPos.x,cameraPos.y,cameraPos.z);
+      scene.add(camera);
+      let vertices = bundleData.rayBundles[0];
+
+      bundleData.rayBundles.forEach(function(vertices) {
+        let rayBundleGeometry = new THREE.BufferGeometry();
+        rayBundleGeometry.addAttribute("position",
+          new THREE.BufferAttribute(new Float32Array(vertices), 3)
+        );
+        let material = new THREE.LineBasicMaterial({
+          color: 0xffffff
+        });
+        material.color.setHex( Math.random() * 0xffffff );
+        var rayBundle = new THREE.LineSegments(rayBundleGeometry, material);
+        scene.add(rayBundle);
+        scene.add(rayBundle);
+      });
+      // Add OrbitControls so that we can pan around with the mouse.
+      control = new THREE.OrbitControls(camera, renderer.domElement);
+      // Later in your code
+      //control.object.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
+      control.target = boxCenter;
+      control.update();
+      control.addEventListener( 'change', render );
+      render();
+    })
+
+
+  </script>
+
+</body>
+</html>
