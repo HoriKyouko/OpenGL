@@ -135,7 +135,7 @@ float positiveQuadFormula(float A, float B, float C) {
 	return (-B + sqrt((B*B) - 4 * A*C)) / (2 * A);
 }
 
-bool sphereIntersection(Ray & trace, glm::vec3 center, int radius, bool &first, std::ostringstream &os2, glm::vec3 &P1, glm::vec3 &P2)
+bool sphereIntersection(Ray & trace, glm::vec3 center, int radius, float &tmin, float &tmax)
 {
 	// equation for ray-sphere interstection is:
 	// t^2 * (d o d) + t * 2 * (O - C) o d + ((O - C) o (O - C) - R^2) = 0
@@ -153,14 +153,16 @@ bool sphereIntersection(Ray & trace, glm::vec3 center, int radius, bool &first, 
 
 	float t1 = negativeQuadFormula(A, B, C);
 	float t2 = positiveQuadFormula(A, B, C);
+
+	tmin = (t1 > tmin) ? t1 : tmin;
+	tmax = (t2 < tmax) ? t2 : tmax;
+
 	// Intersection Rays.
-	if (abs(t1) < abs(t2)) {
-		P1 = trace.origin + (t1 * trace.direction);
-		P2 = trace.origin + (t2 * trace.direction);
+	if (tmin > tmax) {
+		return false;
 	}
 	else {
-		P1 = trace.origin + (t2 * trace.direction);
-		P2 = trace.origin + (t1 * trace.direction);
+		return true;
 	}
 	// Output the intersection points to our outputstream.
 	/*if (first) {
@@ -170,238 +172,11 @@ bool sphereIntersection(Ray & trace, glm::vec3 center, int radius, bool &first, 
 	else {
 		os2 << "," << P1.x << "," << P1.y << "," << P1.z << "," << P2.x << "," << P2.y << "," << P2.z;
 	}*/
-
-	return true;
-}
-
-bool aabbIntersection(Ray & trace, float & txmin, csg & difference, float & txmax, float & tmin, float & tmax, float & tymin, float & tymax, float & tzmin, float & tzmax);
-
-void intersectionIntersection(float &tmin, float &tmax, Ray & trace, float &txmin, csg &intersection, float &txmax, float &tymin, float &tymax, float &tzmin, float &tzmax, glm::vec3 &tA, glm::vec3 &tB, bool &first, std::ostringstream &os2)
-{
-	glm::vec3 P1, P2;
-	// Should print out values that are in both intersection and the sphere
-	bool exist = sphereIntersection(trace, intersection.center, intersection.radius, first, os2, P1, P2);
-
-	tmin = 0;
-	tmax = FLT_MAX;
-
-	if (trace.direction.x >= 0) {
-		txmin = (intersection.min.x - trace.origin.x) / trace.direction.x;
-		txmax = (intersection.max.x - trace.origin.x) / trace.direction.x;
-	}
-	else {
-		txmin = (intersection.max.x - trace.origin.x) / trace.direction.x;
-		txmax = (intersection.min.x - trace.origin.x) / trace.direction.x;
-	}
-
-	tmin = (txmin > tmin) ? txmin : tmin;
-	tmax = (txmax < tmax) ? txmax : tmax;
-
-	if (tmin > tmax) { return; };
-
-	if (trace.direction.y >= 0) {
-		tymin = (intersection.min.y - trace.origin.y) / trace.direction.y;
-		tymax = (intersection.max.y - trace.origin.y) / trace.direction.y;
-	}
-	else {
-		tymin = (intersection.max.y - trace.origin.y) / trace.direction.y;
-		tymax = (intersection.min.y - trace.origin.y) / trace.direction.y;
-	}
-	tmin = (tymin > tmin) ? tymin : tmin;
-	tmax = (tymax < tmax) ? tymax : tmax;
-
-	if (tmin > tmax) { return; };
-
-	if (trace.direction.z >= 0) {
-		tzmin = (intersection.min.z - trace.origin.z) / trace.direction.z;
-		tzmax = (intersection.max.z - trace.origin.z) / trace.direction.z;
-	}
-	else {
-		tzmin = (intersection.max.z - trace.origin.z) / trace.direction.z;
-		tzmax = (intersection.min.z - trace.origin.z) / trace.direction.z;
-	}
-	tmin = (tzmin > tmin) ? tzmin : tmin;
-	tmax = (tzmax < tmax) ? tzmax : tmax;
-
-	if (tmin > tmax) { return; };
-
-	tA = trace.origin + (tmin * trace.direction);
-	tB = trace.origin + (tmax * trace.direction);
-
-	if (first) {
-		os2 << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-		first = false;
-	}
-	else {
-		os2 << "," << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-	}
-}
-
-void unionedIntersection(float &tmin, float &tmax, Ray & trace, float &txmin, csg &unioned, float &txmax, float &tymin, float &tymax, float &tzmin, float &tzmax, glm::vec3 &tA, glm::vec3 &tB, bool &first, std::ostringstream &os2)
-{
-	glm::vec3 P1, P2;
-	// Should print out values that are in either cube and sphere
-	bool exist = sphereIntersection(trace, unioned.center, unioned.radius, first, os2, P1, P2);
-
-	tmin = 0;
-	tmax = FLT_MAX;
-
-	if (trace.direction.x >= 0) {
-		txmin = (unioned.min.x - trace.origin.x) / trace.direction.x;
-		txmax = (unioned.max.x - trace.origin.x) / trace.direction.x;
-	}
-	else {
-		txmin = (unioned.max.x - trace.origin.x) / trace.direction.x;
-		txmax = (unioned.min.x - trace.origin.x) / trace.direction.x;
-	}
-
-	tmin = (txmin > tmin) ? txmin : tmin;
-	tmax = (txmax < tmax) ? txmax : tmax;
-
-	if (tmin > tmax) { return; };
-
-	if (trace.direction.y >= 0) {
-		tymin = (unioned.min.y - trace.origin.y) / trace.direction.y;
-		tymax = (unioned.max.y - trace.origin.y) / trace.direction.y;
-	}
-	else {
-		tymin = (unioned.max.y - trace.origin.y) / trace.direction.y;
-		tymax = (unioned.min.y - trace.origin.y) / trace.direction.y;
-	}
-	tmin = (tymin > tmin) ? tymin : tmin;
-	tmax = (tymax < tmax) ? tymax : tmax;
-
-	if (tmin > tmax) { return; };
-
-	if (trace.direction.z >= 0) {
-		tzmin = (unioned.min.z - trace.origin.z) / trace.direction.z;
-		tzmax = (unioned.max.z - trace.origin.z) / trace.direction.z;
-	}
-	else {
-		tzmin = (unioned.max.z - trace.origin.z) / trace.direction.z;
-		tzmax = (unioned.min.z - trace.origin.z) / trace.direction.z;
-	}
-	tmin = (tzmin > tmin) ? tzmin : tmin;
-	tmax = (tzmax < tmax) ? tzmax : tmax;
-
-	if (tmin > tmax) { return; };
-
-	tA = trace.origin + (tmin * trace.direction);
-	tB = trace.origin + (tmax * trace.direction);
-
-	if (first) {
-		os2 << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-		first = false;
-	}
-	else {
-		os2 << "," << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-	}
-}
-
-void differenceIntersection(Ray & trace, float &txmin, csg &difference, float &txmax, float &tmin, float &tmax, float &tymin, float &tymax, float &tzmin, float &tzmax, glm::vec3 &tA, glm::vec3 &tB, bool &first, std::ostringstream &os2)
-{
-	glm::vec3 P1, P2;
-	// Should only print out values that are only in difference and not sphere
-	bool inter1 = sphereIntersection(trace, difference.center, difference.radius, first, os2, P1, P2);
-	bool inter2 = aabbIntersection(trace, txmin, difference, txmax, tmin, tmax, tymin, tymax, tzmin, tzmax);
-	
-	if (inter1 && inter2) {
-		tA = trace.origin + (tmax * trace.direction);
-		if (first) {
-			os2 << tA.x << "," << tA.y << "," << tA.z << "," << P2.x << "," << P2.y << "," << P2.z;
-			first = false;
-		}
-		else {
-			os2 << "," << tA.x << "," << tA.y << "," << tA.z << "," << P2.x << "," << P2.y << "," << P2.z;
-		}
-	}
-	else if (inter2 && !inter1) {
-		tA = trace.origin + (tmax * trace.direction);
-		tB = trace.origin + (tmin * trace.direction);
-		if (first) {
-			os2 << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-			first = false;
-		}
-		else {
-			os2 << "," << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-		}
-	}
-	else {
-		return;
-	}
-	/*
-	Original thought process...
-
-	glm::vec3 P1, P2, minimum, maximum;
-	// Should only print out values that are only in difference and not sphere
-	bool inter1 = sphereIntersection(trace, difference.center, difference.radius, first, os2, P1, P2);
-	bool inter2 = aabbIntersection(trace, txmin, difference, txmax, tmin, tmax, tymin, tymax, tzmin, tzmax);
-	tA = trace.origin + (tmin * trace.direction);
-	tB = trace.origin + (tmax * trace.direction);
-	//minimum = min(tA, P1);
-	//maximum = max(tB, P2);
-	// return [a1,b1]
-	if (inter2 && !inter1) {
-		if (glm::all(glm::lessThan(tA, P1)) && glm::all(glm::lessThan(tB, P1))) {
-			if (first) {
-				os2 << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-				first = false;
-			}
-			else {
-				os2 << "," << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
-			}
-		}
-	}
-	else if (inter1 && inter2) {
-		// return [0,0]
-		if (glm::all(glm::lessThan(P1, tA)) && glm::all(glm::lessThan(tB, P2))) {
-			if (first) {
-				os2 << 0 << "," << 0 << "," << 0 << "," << 0 << "," << 0 << "," << 0;
-				first = false;
-			}
-			else {
-				os2 << "," << 0 << "," << 0 << "," << 0 << "," << 0 << "," << 0 << "," << 0;
-			}
-		}
-		// return [a1,a2] [b2,b1]
-		else if (glm::all(glm::lessThan(tA, P1)) && glm::all(glm::lessThan(P2, tB))) {
-			if (first) {
-				os2 << tA.x << "," << tA.y << "," << tA.z << "," << P1.x << "," << P1.y << "," << P1.z << "," << P2.x << "," << P2.y << "," << P2.z << "," << tB.x << "," << tB.y << "," << tB.z;
-				first = false;
-			}
-			else {
-				os2 << "," << tA.x << "," << tA.y << "," << tA.z << "," << P1.x << "," << P1.y << "," << P1.z << "," << P2.x << "," << P2.y << "," << P2.z << "," << tB.x << "," << tB.y << "," << tB.z;
-			}
-		}
-		// return [a1,a2]
-		else if (glm::all(glm::lessThan(tA, P1)) && glm::all(glm::lessThan(tB, P2))) {
-			if (first) {
-				os2 << tA.x << "," << tA.y << "," << tA.z << "," << P1.x << "," << P1.y << "," << P1.z;
-				first = false;
-			}
-			else {
-				os2 << "," << tA.x << "," << tA.y << "," << tA.z << "," << P1.x << "," << P1.y << "," << P1.z;
-			}
-		}
-		// return [b1,b2]
-		else if (glm::all(glm::lessThan(P1, tA)) && glm::all(glm::lessThan(P2, tB))) {
-			if (first) {
-				os2 << P2.x << "," << P2.y << "," << P2.z << "," << tB.x << "," << tB.y << "," << tB.z;
-				first = false;
-			}
-			else {
-				os2 << "," << P2.x << "," << P2.y << "," << P2.z << "," << tB.x << "," << tB.y << "," << tB.z;
-			}
-		}
-		else {
-			return;
-		}
-	}*/
 }
 
 bool aabbIntersection(Ray & trace, float & txmin, csg & aabb, float & txmax, float & tmin, float & tmax, float & tymin, float & tymax, float & tzmin, float & tzmax)
 {
-
+	// Determing what our min and max x component is which is dependent on the direction of the ray.
 	if (trace.direction.x >= 0) {
 		txmin = (aabb.min.x - trace.origin.x) / trace.direction.x;
 		txmax = (aabb.max.x - trace.origin.x) / trace.direction.x;
@@ -410,12 +185,12 @@ bool aabbIntersection(Ray & trace, float & txmin, csg & aabb, float & txmax, flo
 		txmin = (aabb.max.x - trace.origin.x) / trace.direction.x;
 		txmax = (aabb.min.x - trace.origin.x) / trace.direction.x;
 	}
-
+	// Swapping tmin and tmax with the min and max of x if the condition holds true.
 	tmin = (txmin > tmin) ? txmin : tmin;
 	tmax = (txmax < tmax) ? txmax : tmax;
-
+	// if we find tmin is greater than tmax then there is no intersection.
 	if (tmin > tmax) { return false; };
-
+	// Determing what our min and max y component is which is dependent on the direction of the ray.
 	if (trace.direction.y >= 0) {
 		tymin = (aabb.min.y - trace.origin.y) / trace.direction.y;
 		tymax = (aabb.max.y - trace.origin.y) / trace.direction.y;
@@ -424,11 +199,12 @@ bool aabbIntersection(Ray & trace, float & txmin, csg & aabb, float & txmax, flo
 		tymin = (aabb.max.y - trace.origin.y) / trace.direction.y;
 		tymax = (aabb.min.y - trace.origin.y) / trace.direction.y;
 	}
+	// Swapping tmin and tmax with the min and max of y if the condition holds true.
 	tmin = (tymin > tmin) ? tymin : tmin;
 	tmax = (tymax < tmax) ? tymax : tmax;
-
+	// if we find tmin is greater than tmax then there is no intersection.
 	if (tmin > tmax) { return false; };
-
+	// Determing what our min and max z component is which is dependent on the direction of the ray.
 	if (trace.direction.z >= 0) {
 		tzmin = (aabb.min.z - trace.origin.z) / trace.direction.z;
 		tzmax = (aabb.max.z - trace.origin.z) / trace.direction.z;
@@ -437,26 +213,170 @@ bool aabbIntersection(Ray & trace, float & txmin, csg & aabb, float & txmax, flo
 		tzmin = (aabb.max.z - trace.origin.z) / trace.direction.z;
 		tzmax = (aabb.min.z - trace.origin.z) / trace.direction.z;
 	}
+	// Swapping tmin and tmax with the min and max of z if the condition holds true.
 	tmin = (tzmin > tmin) ? tzmin : tmin;
 	tmax = (tzmax < tmax) ? tzmax : tmax;
-
+	// if we find tmin is greater than tmax then there is no intersection.
 	if (tmin > tmax) { return false; };
-	
+	// We have an intersection with the box.
 	return true;
+}
+
+// Tests for Intersection intersection... yes that is what I called it.
+bool intersectionIntersection(Ray & trace, csg &intersection, float &tmin, float &tmax, float &txmin, float &txmax, float &tymin, float &tymax, float &tzmin, float &tzmax, float values[2][2], int &nPieces)
+{
+	// set values and test for intersection.
+	float tSphereMin = 0;
+	float tSphereMax = FLT_MAX;
+	tmin = 0;
+	tmax = FLT_MAX;
+
+	bool inter1 = sphereIntersection(trace, intersection.center, intersection.radius, tSphereMin, tSphereMax);
+	bool inter2 = aabbIntersection(trace, txmin, intersection, txmax, tmin, tmax, tymin, tymax, tzmin, tzmax);
+	nPieces = 0;
+	// if we hit both objects
+	if (inter1 && inter2) {
+		// no-overlap case
+		if (tSphereMin >= tmax || tmin >= tSphereMax)
+		{
+			return false;
+		}
+		// if we have overlap when we intersect both then add the max of the minimums and the min of the maximums.
+		else {
+			values[0][0] = fmax(tmin, tSphereMin);
+			values[0][1] = fmin(tmax, tSphereMax);
+			nPieces = 1;
+			return true;
+		}
+	}
+	// if we didn't intersect both then return false.
+	return false;
+}
+// Test for unioned intersection.
+bool unionedIntersection(Ray & trace, csg &unioned, float &tmin, float &tmax, float &txmin, float &txmax, float &tymin, float &tymax, float &tzmin, float &tzmax, float values[2][2], int &nPieces)
+{
+	// set values and test for intersection.
+	float tSphereMin = 0;
+	float tSphereMax = FLT_MAX;
+	tmin = 0;
+	tmax = FLT_MAX;
+	bool inter1 = sphereIntersection(trace, unioned.center, unioned.radius, tSphereMin, tSphereMax);
+	bool inter2 = aabbIntersection(trace, txmin, unioned, txmax, tmin, tmax, tymin, tymax, tzmin, tzmax);
+	nPieces = 0;
+	// if we intersect the sphere add it's intersection points and increment number of pieces we hit.
+	if (inter1) {
+		values[nPieces][0] = tSphereMin;
+		values[nPieces][1] = tSphereMax;
+		nPieces++;
+	}
+	// if we intersect the box add it's intersection points and increment number of pieces we hit.
+	if (inter2) {
+		values[nPieces][0] = tmin;
+		values[nPieces][1] = tmax;
+		nPieces++;
+	}
+	// if we intersected with any of the objects we want to return true else false.
+	return inter1||inter2;
+}
+// Tests for difference intersection.
+bool differenceIntersection(Ray & trace, csg &difference, float &tmin, float &tmax, float &txmin, float &txmax, float &tymin, float &tymax, float &tzmin, float &tzmax, float values[2][2], int &nPieces)
+{
+	
+	float tSphereMin = 0;
+	float tSphereMax = FLT_MAX;
+	tmin = 0;
+	tmax = FLT_MAX;
+	bool inter1 = sphereIntersection(trace, difference.center, difference.radius, tSphereMin, tSphereMax);
+	bool inter2 = aabbIntersection(trace, txmin, difference, txmax, tmin, tmax, tymin, tymax, tzmin, tzmax);
+	nPieces = 0;
+	// if we don't intersect with anything
+	if (inter1 == false && inter2 == false) {
+		return false;
+	}
+	// if we only intersect the sphere.
+	if (inter2 == false && inter1 == true) {
+		values[0][0] = tSphereMin;
+		values[0][1] = tSphereMax;
+		nPieces = 1;
+		return true;
+	}
+	// setting up our two points per intersection of objects. This is statically allocated as we
+	// know for this assignment we only have a sphere and cube, but for future proofing should be
+	// dynamically allocated according to how many intersections and objects we hit
+	float A[2] = { tSphereMin, tSphereMax };
+	float B[2] = { tmin, tmax };
+	if (inter1 && inter2) {	
+		// 2nd object completely overlaps 1st object case
+		if (B[0] <= A[0] && A[1] <= B[1]) {
+			return false;
+		}
+		// no-overlap case
+		else if (A[0] >= B[1] || B[0] >= A[1]) 
+		{
+			values[0][0] = A[0];
+			values[0][1] = A[1];
+			nPieces = 1;
+			return true;
+		}
+		// 1st object completely overlaps 2nd object case
+		else if (A[0] < B[0]) {
+			if (B[1] < A[1]) {
+				values[0][0] = A[0];
+				values[0][1] = B[0];
+				values[1][0] = B[1];
+				values[1][1] = A[1];
+				nPieces = 2;
+				return true;
+			}
+			else {
+				values[0][0] = A[0];
+				values[0][1] = B[0];
+				nPieces = 1;
+				return true;
+			}
+		}
+		// if second object overlaps the first object.
+		else if (B[1] < A[1]) {
+			values[0][0] = B[1];
+			values[0][1] = A[1];
+			nPieces = 1;
+			return true;
+		}
+	}
+	else 
+		return false;
+	return false;
+}
+
+void outputIntersection(Ray &trace, glm::vec3 &tA, glm::vec3 &tB, std::ostringstream &os2, float  values[2][2],  bool &first, bool test, int &nPieces)
+{
+	if (test && nPieces > 0) {
+		tA = trace.origin + (values[0][0] * trace.direction);
+		tB = trace.origin + (values[0][1] * trace.direction);
+		if (!first) {
+			os2 << ",";
+		}
+		os2 << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
+		first = false;
+		if (nPieces == 2) {
+			tA = trace.origin + (values[1][0] * trace.direction);
+			tB = trace.origin + (values[1][1] * trace.direction);
+			if (!first) {
+				os2 << ",";
+			}
+			os2 << tA.x << "," << tA.y << "," << tA.z << "," << tB.x << "," << tB.y << "," << tB.z;
+		}
+	}
+	nPieces = 0;
 }
 
 void buildRayBundle(Sphere spheres[], Ray &trace, glm::vec3 &CV, glm::vec3 &u, glm::vec3 &v, int rows, int cols, float pixelWidth, float pixelHeight)
 {
-	/*Json json = Json::parse(input);
-	string temp = json["scene"]["type"].get<string>();
-	cout << temp;*/
 	//Triangle triangle;
 	csg difference = { glm::vec3(-8, -2, -2), glm::vec3(-4, 2, 2), glm::vec3(-4, 2, 2), 2 };
 	csg unioned = { glm::vec3(-2, -2, -2), glm::vec3(2, 2, 2), glm::vec3(2, 2, 2), 2 };
 	csg intersection = { glm::vec3(4, -2, -2), glm::vec3(8, 2, 2), glm::vec3(8, 2, 2), 2 };
-	// Could not get the json reader to work properly so just copied the values into a float
-	// array for both verticies and normals. Will need to get the reader working though
-	// else it will be impossible to allow more than one mesh to work.
+
 	string myString = "{\"rayBundles\":[[";
 	ostringstream os;
 	ostringstream os2;
@@ -473,17 +393,22 @@ void buildRayBundle(Sphere spheres[], Ray &trace, glm::vec3 &CV, glm::vec3 &u, g
 			// need to normalize our direction.
 			trace.direction = normalize(trace.direction);
 
-
 			glm::vec3 tA, tB;
-			float txmin, txmax, tymin, tymax, tzmin, tzmax;
-			float tmin = 0;
-			float tmax = FLT_MAX;
-
+			float txmin, txmax, tymin, tymax, tzmin, tzmax, tmin, tmax;
+			float values[2][2] = {{ 0,0 }, { 0,0 }};
 			// Though process find intersection of the box and then see if the same ray is a part of the sphere and handle from there.
+			int nPieces = 0;
+			bool test;
+			test = differenceIntersection(trace, difference, tmin, tmax, txmin, txmax, tymin, tymax, tzmin, tzmax, values, nPieces);
+			outputIntersection(trace, tA, tB, os2, values, first, test, nPieces);
+			
+			test = unionedIntersection(trace, unioned, tmin, tmax, txmin, txmax, tymin, tymax, tzmin, tzmax, values, nPieces);
+			outputIntersection(trace, tA, tB, os2, values, first, test, nPieces);
 
-			differenceIntersection(trace, txmin, difference, txmax, tmin, tmax, tymin, tymax, tzmin, tzmax, tA, tB, first, os2);
-			//unionedIntersection(tmin, tmax, trace, txmin, unioned, txmax, tymin, tymax, tzmin, tzmax, tA, tB, first, os2);
-			//intersectionIntersection(tmin, tmax, trace, txmin, intersection, txmax, tymin, tymax, tzmin, tzmax, tA, tB, first, os2);
+			test = intersectionIntersection(trace, intersection, tmin, tmax, txmin, txmax, tymin, tymax, tzmin, tzmax, values, nPieces);
+			outputIntersection(trace, tA, tB, os2, values, first, test, nPieces);
+			
+
 			/*list<float> pointlist;
 			MeshIntersection(triangle, trace, pointlist);
 			// sort our list of t values which will drive our points on the triangle mesh
@@ -510,21 +435,23 @@ void buildRayBundle(Sphere spheres[], Ray &trace, glm::vec3 &CV, glm::vec3 &u, g
 				}
 			}*/
 			/*Sphere generation.
-			SphereRayBundle(trace, spheres, first, os2);
+			SphereRayBundle2(trace, spheres, first, os2);
 			*/
 			// P = o + t*d Primary Rays
+			/*
 			glm::vec3 P = trace.origin + trace.direction;
 			// Output the origin and direction points to our outputstream.
 			if(i+1 == rows && j+1 == cols)
 				os << trace.origin.x << "," << trace.origin.y << "," << trace.origin.z << "," << P.x << "," << P.y << "," << P.z;
 			else
 				os << trace.origin.x << "," << trace.origin.y << "," << trace.origin.z << "," << P.x << "," << P.y << "," << P.z << ",";
+			*/
 		}
 	}
 
 
 	//os << "]";
-	os << "],[";
+	//os << "],[";
 	os2 << "]]}";
 	myString.append(os.str());
 	myString.append(os2.str());
